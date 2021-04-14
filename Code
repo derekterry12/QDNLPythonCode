@@ -1,0 +1,73 @@
+import numpy as np
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+
+########################
+z0 = np.random.random(7) #random inital condition
+tspan = np.linspace(0,10000,100000)#integration time
+n_alpha = 100 #pump parameter
+Bbz = np.zeros(n_alpha) #allows for faster computation
+bz = np.zeros(n_alpha) #allows for faster computation
+alpha_vals = np.logspace(0,6,n_alpha)#range of pump values
+##########################
+
+
+def coherent(z,t):
+    bCv= z[0] + 1j*z[1];
+    Cc = z[2];
+    Bb = z[3];
+    
+    b = z[4];
+    Vc = z[5] + 1j*z[6];
+    
+    gamma = 10000. #Dephasing rate of photon-assisted polarisation
+    gamma_c = 10. #photon decay rate in the cavity
+    gamma_nl = 0. #spot. emission rate into non lasing modes
+    gamma_nr = 1. #Non-radiative decay rate
+    N = 21 #no. of quantum dots
+    g = 70. #light-matter coupling strength
+    delta = 0. #detuning
+    
+    Cc_dot = -(gamma_nl + gamma_nr)*Cc + alpha*(1-Cc) - 2*g*(bCv + b*((Vc.real).conjugate())).real
+    bCv_dot = -(gamma + gamma_c)*bCv + g.conjugate()*(Cc + Bb*(2*Cc-1)) - (Vc.real * Vc.real).conjugate()
+    Bb_dot = -2*gamma_c*Bb + 2*N*g*(bCv.real)
+    
+    b_dot = -gamma_c*b + (g.conjugate())*N*(Vc.real)
+    Vc_dot = -(gamma - 1j*delta)*Vc + g*b*(2*Cc-1)
+    
+    return [bCv_dot.real, bCv_dot.imag, Cc_dot, Bb_dot, b_dot, Vc_dot.real, Vc_dot.imag]
+
+########################
+
+for i in range(0,n_alpha):
+    alpha = alpha_vals[i]
+    z = odeint(coherent , z0, tspan)
+
+    #number of photons
+    Bb1 = z[:,3]
+    Bb2 = z[:,4]**2
+    Bbz[i] = Bb1[-1] + Bb2[-1]
+    #coherent field
+    bf = z[:,4]
+    bz[i] = bf[-1].real
+    
+plt.figure(1)
+plt.loglog(alpha_vals,Bbz,'b')
+plt.xlabel(r'$\alpha$')
+plt.ylabel(r'$\langle b^\dag b\rangle$')
+
+plt.figure(2)
+plt.plot(alpha_vals,bz,'b')
+plt.xlabel(r'$\alpha$')
+plt.ylabel(r'$|\langle b\rangle|$')
+#########################
+
+
+
+
+
+
+
+
+
+
